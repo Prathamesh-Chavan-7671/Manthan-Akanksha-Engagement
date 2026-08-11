@@ -146,6 +146,11 @@
       radial-gradient(circle at 50% 50%, rgba(20,32,36,.05), rgba(15,24,28,.42) 78%);
     opacity:0;
   }
+  .video-names .vn-sub{
+    font-family:'Cinzel', serif; font-size:.62rem;
+    letter-spacing:.3em; text-transform:uppercase; color:var(--gold-300);
+    margin-bottom:14px;
+  }
   .video-names .vn-names{
     font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:600;
     font-size:clamp(2.3rem, 9vw, 4.4rem); line-height:1.05;
@@ -155,10 +160,6 @@
   .video-names .vn-names .amp{
     display:block; font-family:'Cormorant Garamond', serif; font-style:normal;
     font-size:.42em; color:var(--gold-300); margin:2px 0;
-  }
-  .video-names .vn-sub{
-    margin-top:14px; font-family:'Cinzel', serif; font-size:.64rem;
-    letter-spacing:.32em; text-transform:uppercase; color:var(--gold-300);
   }
 
   .skip-intro{
@@ -370,6 +371,11 @@
 
   .reveal{ opacity:0; transform:translateY(28px); }
 
+  /* ================= RESPONSIVENESS ================= */
+  @media (max-width:900px){
+    .container{ max-width:640px; }
+  }
+
   @media (max-width:560px){
     .invite-card{ flex-direction:column; }
     .invite-card .date-block{ border-right:none; border-bottom:1px solid rgba(233,211,163,.3); }
@@ -377,6 +383,29 @@
     .event-item{ grid-template-columns:22px 1fr; }
     .skip-intro{ right:16px; bottom:22px; font-size:.6rem; padding:9px 15px; }
     .tap-ring{ width:104px; height:104px; }
+    .video-names{ padding:18px; }
+    .video-names .vn-sub{ font-size:.56rem; letter-spacing:.24em; margin-bottom:10px; }
+    #soundToggle{ width:42px; height:42px; top:14px; right:14px; font-size:.95rem; }
+    .story{ padding:90px 0 70px; }
+    .events{ padding:56px 0 80px; }
+    .venue-section{ padding:56px 0 80px; }
+    .venue-card{ padding:32px 22px; }
+    footer{ padding:40px 20px 32px; }
+  }
+
+  @media (max-width:380px){
+    .hero-names{ font-size:clamp(2.5rem, 13vw, 4.5rem); }
+    .invite-card .venue-block{ padding:12px 16px; }
+    .invite-card .date-block{ padding:12px 16px; }
+    .btn{ padding:12px 20px; font-size:.66rem; }
+  }
+
+  @media (min-width:900px){
+    .hero-bottom{ padding-bottom:60px; }
+  }
+
+  @media (hover:none) and (pointer:coarse){
+    .btn.solid:hover{ transform:none; box-shadow:none; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -400,16 +429,16 @@
       <source src="https://ik.imagekit.io/c9crfmeez/royal-heritage.mp4?updatedAt=1786380004538" type="video/mp4">
     </video>
 
-    <!-- Fades in over the last 4 seconds of the film, then dissolves
-         straight into the hero names below as the intro ends -->
+    <!-- Fades in over the last 4 seconds of the film (music fades in
+         at the same moment), then dissolves straight into the hero
+         names below as the intro ends -->
     <div class="video-names" id="videoNames">
-        <p class="vn-sub">You Are Invited to Engagement of</p>
+      <p class="vn-sub">You Are Invited to Engagement of</p>
       <div class="vn-names">
         Manthan
         <span class="amp">&amp;</span>
         Akanksha
       </div>
-      
     </div>
 
     <button class="skip-intro" id="skipIntro" type="button">Skip Intro ›</button>
@@ -529,9 +558,8 @@
           <a class="btn ghost" href="#" id="directionsBtn" target="_blank" rel="noopener">Get Directions</a>
         </div>
         <div class="chips">
-          
           <span class="chip">Family &amp; Close Friends</span>
-          <span class="chip">Valet Available</span>
+          
         </div>
       </div>
     </div>
@@ -545,7 +573,7 @@
 
 <!-- Background music for the entire site -->
 <audio id="bgAudio" loop preload="auto">
-  <source src="https://ik.imagekit.io/c9crfmeez/MA-Satyam-Music.mp3" type="audio/mpeg">
+  <source src="https://ik.imagekit.io/c9crfmeez/Manu%20&amp;%20KrishnapriyaSathyam%20sarva%20mangalyam_wedding%20_indianwedding%20_bride_marriage.mp3" type="audio/mpeg">
 </audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -582,13 +610,22 @@ const skipIntro = document.getElementById('skipIntro');
 const soundToggle = document.getElementById('soundToggle');
 const audio = document.getElementById('bgAudio');
 
-const NAME_LEAD_SECONDS = 4; // names surface this many seconds before the film ends
+const NAME_LEAD_SECONDS = 4; // names — and the music — surface this many seconds before the film ends
 
 let introFinished = false;
 let namesShown = false;
+let musicStarted = false;
 let started = false;
 
 gsap.set(videoNames, { y: 14 });
+
+// Fades the background track up to its resting volume. Guarded so it
+// only ever runs once, however it gets triggered.
+function startMusic(duration){
+  if(musicStarted) return;
+  musicStarted = true;
+  gsap.to(audio, { volume:0.55, duration, ease:'power1.inOut' });
+}
 
 // A single tap anywhere on the gate starts the film directly — no
 // intermediate "watch invitation" screen or button to press first.
@@ -597,14 +634,15 @@ gate.addEventListener('click', () => {
   started = true;
   gate.style.cursor = 'default';
 
-  // Start the background track muted-in (volume 0) right inside this click
-  // gesture so the browser doesn't block it later — we fade it in once the
-  // film has finished playing.
+  // Start the track silently right inside this click gesture so the
+  // browser doesn't block playback later — it stays at volume 0 until
+  // the names surface on the film, at which point we fade it in.
   audio.volume = reduced ? 0.55 : 0;
   audio.play().catch(()=>{});
 
   if(reduced){
     // Respect reduced-motion: skip the film entirely and go straight in.
+    startMusic(0.4);
     finishIntro(true);
     return;
   }
@@ -632,9 +670,10 @@ gate.addEventListener('click', () => {
   }, 480);
 });
 
-// Reveal "Manthan & Akanksha" on the film itself once we're within the
-// last NAME_LEAD_SECONDS of its runtime — a quiet moment on the film
-// before it dissolves into the site.
+// Reveal "Manthan & Akanksha" on the film itself — and bring the
+// background music up with it — once we're within the last
+// NAME_LEAD_SECONDS of its runtime: a quiet moment on the film before
+// it dissolves into the site.
 introVideo.addEventListener('timeupdate', () => {
   if(namesShown) return;
   const d = introVideo.duration;
@@ -642,6 +681,7 @@ introVideo.addEventListener('timeupdate', () => {
   if(d - introVideo.currentTime <= NAME_LEAD_SECONDS){
     namesShown = true;
     gsap.to(videoNames, { opacity:1, y:0, duration:1.1, ease:'power2.out' });
+    startMusic(1.4);
   }
 });
 
@@ -652,8 +692,9 @@ function finishIntro(instant){
   if(introFinished) return;
   introFinished = true;
 
-  // Bring the background music up to full volume.
-  gsap.to(audio, { volume:0.55, duration: instant ? 0.4 : 1.2, ease:'power1.inOut' });
+  // Fallback: if the viewer skipped before the names (and music) had
+  // a chance to fade in on their own, bring the track up now.
+  startMusic(instant ? 0.4 : 1.0);
 
   if(instant){
     gate.classList.add('hidden');
