@@ -136,8 +136,33 @@
     object-fit:cover; display:block;
     background:var(--teal-600);
   }
+
+  /* ---- names that surface on the film in its final seconds ---- */
+  .video-names{
+    position:absolute; inset:0; z-index:4;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding:24px; pointer-events:none;
+    background:
+      radial-gradient(circle at 50% 50%, rgba(20,32,36,.05), rgba(15,24,28,.42) 78%);
+    opacity:0;
+  }
+  .video-names .vn-names{
+    font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:600;
+    font-size:clamp(2.3rem, 9vw, 4.4rem); line-height:1.05;
+    color:var(--ivory);
+    text-shadow:0 6px 40px rgba(15,26,30,.6);
+  }
+  .video-names .vn-names .amp{
+    display:block; font-family:'Cormorant Garamond', serif; font-style:normal;
+    font-size:.42em; color:var(--gold-300); margin:2px 0;
+  }
+  .video-names .vn-sub{
+    margin-top:14px; font-family:'Cinzel', serif; font-size:.64rem;
+    letter-spacing:.32em; text-transform:uppercase; color:var(--gold-300);
+  }
+
   .skip-intro{
-    position:absolute; bottom:28px; right:24px; z-index:4;
+    position:absolute; bottom:28px; right:24px; z-index:5;
     font-family:'Cinzel', serif; letter-spacing:.18em; text-transform:uppercase;
     font-size:.63rem; color:var(--ivory); font-weight:600;
     background:rgba(31,54,62,.5); backdrop-filter:blur(6px);
@@ -374,6 +399,19 @@
     <video id="introVideo" playsinline webkit-playsinline preload="auto">
       <source src="https://ik.imagekit.io/c9crfmeez/royal-heritage.mp4?updatedAt=1786380004538" type="video/mp4">
     </video>
+
+    <!-- Fades in over the last 4 seconds of the film, then dissolves
+         straight into the hero names below as the intro ends -->
+    <div class="video-names" id="videoNames">
+        <p class="vn-sub">You Are Invited to Engagement of</p>
+      <div class="vn-names">
+        Manthan
+        <span class="amp">&amp;</span>
+        Akanksha
+      </div>
+      
+    </div>
+
     <button class="skip-intro" id="skipIntro" type="button">Skip Intro ›</button>
   </div>
 </div>
@@ -491,7 +529,7 @@
           <a class="btn ghost" href="#" id="directionsBtn" target="_blank" rel="noopener">Get Directions</a>
         </div>
         <div class="chips">
-          <span class="chip">Traditional Attire</span>
+          
           <span class="chip">Family &amp; Close Friends</span>
           <span class="chip">Valet Available</span>
         </div>
@@ -539,12 +577,18 @@ const gateContent = document.getElementById('gateContent');
 const gateNote = document.getElementById('gateNote');
 const videoOverlay = document.getElementById('videoOverlay');
 const introVideo = document.getElementById('introVideo');
+const videoNames = document.getElementById('videoNames');
 const skipIntro = document.getElementById('skipIntro');
 const soundToggle = document.getElementById('soundToggle');
 const audio = document.getElementById('bgAudio');
 
+const NAME_LEAD_SECONDS = 4; // names surface this many seconds before the film ends
+
 let introFinished = false;
+let namesShown = false;
 let started = false;
+
+gsap.set(videoNames, { y: 14 });
 
 // A single tap anywhere on the gate starts the film directly — no
 // intermediate "watch invitation" screen or button to press first.
@@ -588,6 +632,19 @@ gate.addEventListener('click', () => {
   }, 480);
 });
 
+// Reveal "Manthan & Akanksha" on the film itself once we're within the
+// last NAME_LEAD_SECONDS of its runtime — a quiet moment on the film
+// before it dissolves into the site.
+introVideo.addEventListener('timeupdate', () => {
+  if(namesShown) return;
+  const d = introVideo.duration;
+  if(!isFinite(d) || d <= 0) return;
+  if(d - introVideo.currentTime <= NAME_LEAD_SECONDS){
+    namesShown = true;
+    gsap.to(videoNames, { opacity:1, y:0, duration:1.1, ease:'power2.out' });
+  }
+});
+
 introVideo.addEventListener('ended', () => finishIntro());
 skipIntro.addEventListener('click', () => finishIntro());
 
@@ -596,7 +653,7 @@ function finishIntro(instant){
   introFinished = true;
 
   // Bring the background music up to full volume.
-  gsap.to(audio, { volume:0.55, duration: instant ? 0.4 : 1.1, ease:'power1.inOut' });
+  gsap.to(audio, { volume:0.55, duration: instant ? 0.4 : 1.2, ease:'power1.inOut' });
 
   if(instant){
     gate.classList.add('hidden');
@@ -607,19 +664,25 @@ function finishIntro(instant){
     return;
   }
 
+  // ---- Crossfade, not a cut ----
+  // The film (with the couple's names still resting on it) dissolves
+  // away while the hero underneath begins revealing itself at the same
+  // time, so the names on the video hand off directly to the hero's own
+  // names rather than the screen ever going blank or cutting hard.
   gsap.to(videoOverlay, {
-    opacity:0, duration:.7, ease:'power2.inOut',
+    opacity:0, duration:1.3, ease:'power2.inOut',
     onComplete: () => { videoOverlay.classList.remove('show'); introVideo.pause(); }
   });
 
+  document.body.classList.remove('locked');
+  soundToggle.classList.add('show');
+  playHeroIntro();
+
   gsap.to(gate, {
-    opacity:0, duration:.8, ease:'power2.inOut', delay:.15,
+    opacity:0, duration:1.3, ease:'power2.inOut', delay:.25,
     onComplete: () => {
       gate.classList.add('hidden');
-      document.body.classList.remove('locked');
-      soundToggle.classList.add('show');
-      playHeroIntro();
-      setTimeout(()=>ScrollTrigger.refresh(), 600);
+      setTimeout(()=>ScrollTrigger.refresh(), 200);
     }
   });
 }
