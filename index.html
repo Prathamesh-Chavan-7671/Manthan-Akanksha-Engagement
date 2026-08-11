@@ -559,7 +559,7 @@
         </div>
         <div class="chips">
           <span class="chip">Family &amp; Close Friends</span>
-          
+          <span class="chip">Valet Available</span>
         </div>
       </div>
     </div>
@@ -573,7 +573,7 @@
 
 <!-- Background music for the entire site -->
 <audio id="bgAudio" loop preload="auto">
-  <source src="https://ik.imagekit.io/c9crfmeez/Satyam%20Sarva%20Mangalyam_75_224.mp3" type="audio/mpeg">
+  <source src="https://ik.imagekit.io/c9crfmeez/Satyam%20Sarva%20Mangalyam_77_224.mp3" type="audio/mpeg">
 </audio>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -681,6 +681,13 @@ introVideo.addEventListener('timeupdate', () => {
   if(d - introVideo.currentTime <= NAME_LEAD_SECONDS){
     namesShown = true;
     gsap.to(videoNames, { opacity:1, y:0, duration:1.1, ease:'power2.out' });
+
+    // Rewind the track to its exact start (0:00 of the linked file) right
+    // as the names appear, so playback always begins from the true start
+    // of the song in sync with this moment — not from wherever the silent
+    // priming play() left it.
+    try{ audio.currentTime = 0; }catch(e){}
+    audio.play().catch(()=>{});
     startMusic(1.4);
   }
 });
@@ -693,7 +700,12 @@ function finishIntro(instant){
   introFinished = true;
 
   // Fallback: if the viewer skipped before the names (and music) had
-  // a chance to fade in on their own, bring the track up now.
+  // a chance to fade in on their own, rewind to the true start of the
+  // track and bring it up now.
+  if(!musicStarted){
+    try{ audio.currentTime = 0; }catch(e){}
+    audio.play().catch(()=>{});
+  }
   startMusic(instant ? 0.4 : 1.0);
 
   if(instant){
